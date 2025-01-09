@@ -1,53 +1,84 @@
-import React, { memo, useEffect } from "react";
+import { memo, useEffect } from "react";
 import { Col, Row } from "react-bootstrap";
 import { ContactCard } from "src/components/ContactCard";
 import { FilterForm, FilterFormValues } from "src/components/FilterForm";
 import {
-  fetchContacts,
   filterContacts,
-} from "src/store/actions/contactActions";
-
-import { fetchGroupContacts } from "src/store/actions/groupActions";
+  setContacts,
+  useGetContactsQuery,
+} from "src/store/contacts";
+import { setGroups, useGetGroupsQuery } from "src/store/groups";
 import { useAppDispatch, useAppSelector } from "src/store/hooks";
 import { ContactDto } from "src/types/dto/ContactDto";
 
 export const ContactListPage = memo(() => {
   const dispatch = useAppDispatch();
 
-  const contacts = useAppSelector((state) => state.contacts.filteredContacts);
-  const groupContacts = useAppSelector((state) => state.groups.groupsList);
-  const loading = useAppSelector((state) => state.contacts.loading);
-  const error = useAppSelector((state) => state.contacts.error);
+  const filteredContacts = useAppSelector(
+    (state) => state.contacts.filteredContacts
+  );
+
+  const { data: contacts, isLoading, error } = useGetContactsQuery();
+  const { data: groups } = useGetGroupsQuery();
 
   useEffect(() => {
-    dispatch(fetchContacts());
-    dispatch(fetchGroupContacts());
-  }, [dispatch]);
+    if (contacts) {
+      dispatch(setContacts(contacts));
+    }
+    if (groups) {
+      dispatch(setGroups(groups));
+    }
+  }, [contacts, dispatch, groups]);
 
-  if (loading) {
+  const handleSubmit = (values: Partial<FilterFormValues>) => {
+    let filteredContacts = contacts || [];
+
+    if (values.name) {
+      const nameLower = values.name.toLowerCase();
+      filteredContacts = filteredContacts.filter((contact) =>
+        contact.name.toLowerCase().includes(nameLower)
+      );
+    }
+
+    if (values.groupId && groups) {
+      const group = groups.find((group) => group.id === values.groupId);
+      if (group) {
+        filteredContacts = filteredContacts.filter((contact) =>
+          group.contactIds.includes(contact.id)
+        );
+      }
+    }
+
+    dispatch(filterContacts({ contacts: filteredContacts }));
+  };
+
+  if (isLoading) {
     return <p>Загрузка контактов...</p>;
   }
 
   if (error) {
-    return <p>Ошибка: {error}</p>;
+    return (
+      <p>
+        Ошибка:{" "}
+        {typeof error === "string"
+          ? error
+          : "Произошла ошибка при загрузке данных."}
+      </p>
+    );
   }
-
-  const handleSubmit = (values: Partial<FilterFormValues>) => {
-    dispatch(filterContacts(values));
-  };
 
   return (
     <Row xxl={1}>
       <Col className="mb-3">
         <FilterForm
-          groupContactsList={groupContacts}
           initialValues={{}}
           onSubmit={handleSubmit}
+          groupContactsList={groups || []}
         />
       </Col>
       <Col>
         <Row xxl={4} className="g-4">
-          {contacts.map((contact: ContactDto) => (
+          {filteredContacts?.map((contact: ContactDto) => (
             <Col key={contact.id}>
               <ContactCard contact={contact} withLink />
             </Col>
