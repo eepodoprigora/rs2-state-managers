@@ -1,30 +1,28 @@
 import { Col, Row } from "react-bootstrap";
 import { useParams } from "react-router-dom";
+import { observer } from "mobx-react-lite";
 import { ContactCard } from "src/components/ContactCard";
 import { Empty } from "src/components/Empty";
-import { useGetContactQuery } from "src/store/contacts";
-import { useAppSelector } from "src/store/hooks";
+import { contactsStore } from "src/store/contactsStore";
 
-export const ContactPage = () => {
+export const ContactPage = observer(() => {
   const { contactId } = useParams<{ contactId: string }>();
 
-  const selectedContactFromStore = useAppSelector((state) =>
-    state.contacts.contactsList.find((contact) => contact.id === contactId)
+  const selectedContactFromStore = contactsStore.contactsList.find(
+    (contact) => contact.id === contactId
   );
 
-  const {
-    data: selectedContactFromQuery,
-    isLoading,
-    error,
-  } = useGetContactQuery(contactId || "", { skip: !!selectedContactFromStore });
+  if (!selectedContactFromStore && contactId) {
+    contactsStore.getContacts();
+  }
 
-  const selectedContact = selectedContactFromStore || selectedContactFromQuery;
+  const selectedContact = selectedContactFromStore;
 
-  if (isLoading) {
+  if (contactsStore.isLoading) {
     return <p>Загрузка контакта...</p>;
   }
 
-  if (error) {
+  if (contactsStore.error) {
     return <p>Ошибка загрузки контакта.</p>;
   }
 
@@ -39,4 +37,4 @@ export const ContactPage = () => {
       </Col>
     </Row>
   );
-};
+});

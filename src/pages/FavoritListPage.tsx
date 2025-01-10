@@ -1,46 +1,38 @@
-import { memo, useEffect, useState } from "react";
+// pages/FavoritListPage.tsx
+import { useEffect } from "react";
 import { Col, Row } from "react-bootstrap";
+import { observer } from "mobx-react-lite";
 import { ContactCard } from "src/components/ContactCard";
-import { setContacts, useGetContactsQuery } from "src/store/contacts";
-import { useAppSelector, useAppDispatch } from "src/store/hooks";
-import { ContactDto } from "src/types/dto/ContactDto";
+import { favoritesStore } from "src/store/favoritesStore";
 
-export const FavoritListPage = memo(() => {
-  const { favoriteContacts } = useAppSelector((state) => state.favourites);
-  const { contactsList } = useAppSelector((state) => state.contacts);
-
-  const [favoriteContactsData, setFavoriteContactsData] = useState<
-    ContactDto[]
-  >([]);
-
-  const { data: fetchedContacts, isLoading } = useGetContactsQuery();
-  const dispatch = useAppDispatch();
+export const FavoritListPage = observer(() => {
+  const { favoriteContacts, isLoading, error } = favoritesStore;
 
   useEffect(() => {
-    if (
-      fetchedContacts &&
-      fetchedContacts.length > 0 &&
-      contactsList.length === 0
-    ) {
-      dispatch(setContacts(fetchedContacts));
+    if (favoriteContacts.length === 0) {
+      favoritesStore.getFavoriteContacts();
     }
-  }, [fetchedContacts, contactsList, dispatch]);
-
-  useEffect(() => {
-    setFavoriteContactsData(contactsList.slice(0, 4));
-  }, [contactsList, favoriteContacts]);
+  }, [favoriteContacts]);
 
   if (isLoading) {
     return <div>Загрузка...</div>;
   }
 
+  if (error) {
+    return <div>{error}</div>;
+  }
+
   return (
     <Row xxl={4} className="g-4">
-      {favoriteContactsData.map((contact: ContactDto) => (
-        <Col key={contact.id}>
-          <ContactCard contact={contact} withLink />
-        </Col>
-      ))}
+      {favoriteContacts.length > 0 ? (
+        favoriteContacts.map((contact) => (
+          <Col key={contact.id}>
+            <ContactCard contact={contact} withLink />
+          </Col>
+        ))
+      ) : (
+        <p>Нет избранных контактов</p>
+      )}
     </Row>
   );
 });

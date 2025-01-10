@@ -1,71 +1,41 @@
-import { memo, useEffect } from "react";
+import { useEffect } from "react";
+import { observer } from "mobx-react-lite";
 import { Col, Row } from "react-bootstrap";
 import { ContactCard } from "src/components/ContactCard";
 import { FilterForm, FilterFormValues } from "src/components/FilterForm";
-import {
-  filterContacts,
-  setContacts,
-  useGetContactsQuery,
-} from "src/store/contacts";
-import { setGroups, useGetGroupsQuery } from "src/store/groups";
-import { useAppDispatch, useAppSelector } from "src/store/hooks";
+import { contactsStore } from "src/store/contactsStore";
+
 import { ContactDto } from "src/types/dto/ContactDto";
+import { groupsStore } from "src/store/groupsStore";
 
-export const ContactListPage = memo(() => {
-  const dispatch = useAppDispatch();
-
-  const filteredContacts = useAppSelector(
-    (state) => state.contacts.filteredContacts
-  );
-
-  const { data: contacts, isLoading, error } = useGetContactsQuery();
-  const { data: groups } = useGetGroupsQuery();
-
+export const ContactListPage = observer(() => {
   useEffect(() => {
-    if (contacts) {
-      dispatch(setContacts(contacts));
+    if (!contactsStore.contactsList?.length) {
+      contactsStore.getContacts();
+      groupsStore.getGroups();
     }
-    if (groups) {
-      dispatch(setGroups(groups));
-    }
-  }, [contacts, dispatch, groups]);
+  }, []);
 
   const handleSubmit = (values: Partial<FilterFormValues>) => {
-    let filteredContacts = contacts || [];
-
-    if (values.name) {
-      const nameLower = values.name.toLowerCase();
-      filteredContacts = filteredContacts.filter((contact) =>
-        contact.name.toLowerCase().includes(nameLower)
-      );
-    }
-
-    if (values.groupId && groups) {
-      const group = groups.find((group) => group.id === values.groupId);
-      if (group) {
-        filteredContacts = filteredContacts.filter((contact) =>
-          group.contactIds.includes(contact.id)
-        );
-      }
-    }
-
-    dispatch(filterContacts({ contacts: filteredContacts }));
+    contactsStore.filterContacts(values);
   };
 
-  if (isLoading) {
+  if (contactsStore.isLoading) {
     return <p>Загрузка контактов...</p>;
   }
 
-  if (error) {
+  if (contactsStore.error) {
     return (
       <p>
         Ошибка:{" "}
-        {typeof error === "string"
-          ? error
+        {typeof contactsStore.error === "string"
+          ? contactsStore.error
           : "Произошла ошибка при загрузке данных."}
       </p>
     );
   }
+  const filteredContacts = contactsStore.filteredContacts ?? [];
+  const groups = groupsStore.groupsList ?? [];
 
   return (
     <Row xxl={1}>
@@ -78,7 +48,7 @@ export const ContactListPage = memo(() => {
       </Col>
       <Col>
         <Row xxl={4} className="g-4">
-          {filteredContacts?.map((contact: ContactDto) => (
+          {filteredContacts.map((contact: ContactDto) => (
             <Col key={contact.id}>
               <ContactCard contact={contact} withLink />
             </Col>

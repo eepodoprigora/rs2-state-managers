@@ -1,27 +1,32 @@
-import { memo } from "react";
+import { useEffect } from "react";
 import { Col, Row } from "react-bootstrap";
+import { observer } from "mobx-react-lite";
 import { GroupContactsCard } from "src/components/GroupContactsCard";
-import { useGetGroupsQuery } from "src/store/groups";
 import { Empty } from "src/components/Empty";
+import { groupsStore } from "src/store/groupsStore";
 
-export const GroupListPage = memo(() => {
-  const { data: groupsList, isLoading, error } = useGetGroupsQuery();
+export const GroupListPage = observer(() => {
+  useEffect(() => {
+    if (!groupsStore.groupsList.length) {
+      groupsStore.getGroups();
+    }
+  }, []);
 
-  if (isLoading) {
+  if (groupsStore.isLoading) {
     return <p>Загрузка групп...</p>;
   }
 
-  if (error) {
+  if (groupsStore.error) {
     return <p>Ошибка загрузки групп.</p>;
   }
 
-  if (!groupsList || groupsList.length === 0) {
+  if (!groupsStore.groupsList || groupsStore.groupsList.length === 0) {
     return <Empty />;
   }
 
   return (
     <Row xxl={4} className="g-4">
-      {groupsList.map((groupContacts) => (
+      {groupsStore.groupsList.map((groupContacts) => (
         <Col key={groupContacts.id}>
           <GroupContactsCard groupContacts={groupContacts} withLink />
         </Col>
