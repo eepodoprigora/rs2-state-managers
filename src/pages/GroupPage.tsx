@@ -2,7 +2,8 @@ import React, { memo, useEffect } from "react";
 import { Col, Row } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "src/store/hooks";
-import { fetchGroupContacts } from "src/store/actions/groupActions"; // Импортируйте нужные действия
+import { fetchGroupContacts } from "src/store/actions/groupActions";
+import { fetchContacts } from "src/store/actions/contactActions"; // Запрос на получение контактов
 import { GroupContactsCard } from "src/components/GroupContactsCard";
 import { Empty } from "src/components/Empty";
 import { ContactCard } from "src/components/ContactCard";
@@ -12,8 +13,11 @@ import { GroupContactsDto } from "src/types/dto/GroupContactsDto";
 export const GroupPage = memo(() => {
   const { groupId } = useParams<{ groupId: string }>();
   const dispatch = useAppDispatch();
+
   const { groupsList } = useAppSelector((state) => state.groups);
-  const { contacts } = useAppSelector((state) => state.contacts);
+  const { contacts, loading: contactsLoading } = useAppSelector(
+    (state) => state.contacts
+  );
 
   const groupContacts = groupsList.find(
     (group: GroupContactsDto) => group.id === groupId
@@ -23,8 +27,13 @@ export const GroupPage = memo(() => {
     if (!groupContacts) {
       dispatch(fetchGroupContacts());
     }
-  }, [groupId, groupContacts, dispatch]);
 
+    if (contacts.length === 0 && !contactsLoading) {
+      dispatch(fetchContacts());
+    }
+  }, [groupId, groupContacts, contacts.length, dispatch, contactsLoading]);
+
+  // Фильтруем контакты по группе
   const groupContactsFiltered = groupContacts
     ? contacts.filter(({ id }: ContactDto) =>
         groupContacts.contactIds.includes(id)
