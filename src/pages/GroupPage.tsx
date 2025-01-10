@@ -33,7 +33,6 @@ export const GroupPage = memo(() => {
     }
   }, [groupId, groupContacts, contacts.length, dispatch, contactsLoading]);
 
-  // Фильтруем контакты по группе
   const groupContactsFiltered = groupContacts
     ? contacts.filter(({ id }: ContactDto) =>
         groupContacts.contactIds.includes(id)
