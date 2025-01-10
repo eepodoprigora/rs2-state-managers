@@ -1,19 +1,19 @@
-import React, { memo } from "react";
+import React, { memo, useEffect } from "react";
 import { Col, Row } from "react-bootstrap";
 import { useParams } from "react-router-dom";
 import { GroupContactsCard } from "src/components/GroupContactsCard";
 import { ContactCard } from "src/components/ContactCard";
 import { Empty } from "src/components/Empty";
 import { useGetGroupQuery } from "src/store/groups";
-import { useAppSelector } from "src/store/hooks";
+import { useAppDispatch, useAppSelector } from "src/store/hooks";
+import { setContacts, useGetContactsQuery } from "src/store/contacts";
 
 export const GroupPage = memo(() => {
   const { groupId } = useParams<{ groupId: string }>();
+  const dispatch = useAppDispatch();
 
-  // Получаем список контактов из Redux
   const contacts = useAppSelector((state) => state.contacts.contactsList);
 
-  // Запрашиваем группу по ID
   const {
     data: group,
     isLoading,
@@ -21,6 +21,16 @@ export const GroupPage = memo(() => {
   } = useGetGroupQuery(groupId ?? "", {
     skip: !groupId,
   });
+
+  const { data: fetchedContacts } = useGetContactsQuery(undefined, {
+    skip: contacts.length > 0,
+  });
+
+  useEffect(() => {
+    if (fetchedContacts && fetchedContacts.length > 0) {
+      dispatch(setContacts(fetchedContacts));
+    }
+  }, [fetchedContacts, dispatch]);
 
   if (isLoading) {
     return <p>Загрузка группы...</p>;
@@ -33,8 +43,6 @@ export const GroupPage = memo(() => {
   if (!group) {
     return <Empty />;
   }
-
-  // Фильтруем контакты, которые входят в группу
   const groupContactsFiltered = contacts.filter(({ id }) =>
     group.contactIds.includes(id)
   );
